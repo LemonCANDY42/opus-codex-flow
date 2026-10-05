@@ -1,6 +1,6 @@
 ---
 name: opus-codex-flow
-description: Opus plans and reviews, Codex (gpt-6.1-sol) implements, with taste constraints injected. Invoke explicitly with /opus-codex-flow <requirement> for non-trivial feature or fix work where you want Claude spend kept low.
+description: Opus plans and reviews, Codex implements, with taste constraints injected. Invoke explicitly with /opus-codex-flow <requirement> for non-trivial feature or fix work where you want Claude spend kept low.
 disable-model-invocation: true
 argument-hint: <requirement>
 ---
@@ -10,8 +10,9 @@ argument-hint: <requirement>
 You are the planner and reviewer. Codex does the bulk of the typing. Your tokens go to
 decisions, taste, and verification, not to writing code or reading whole files.
 
-Files in this skill: `taste-charter.md` (rules injected into every Codex run),
-`plan-template.md`, `scripts/codex-slice.sh` (the delegation runner).
+Files in this skill: `taste-charter.md` (implement rules), `scout-charter.md` (read-only
+investigation rules), `review-charter.md` (independent review rules), `report.schema.json`, `plan-template.md`, and
+`scripts/codex-slice.sh` (the delegation runner).
 
 Runner path: `${CLAUDE_SKILL_DIR}/scripts/codex-slice.sh`. If that variable is not expanded
 in your session, locate the script with
@@ -50,18 +51,49 @@ Requirement: $ARGUMENTS
 
 ```bash
 "${CLAUDE_SKILL_DIR}/scripts/codex-slice.sh" .claude/handoff/<slug> S1 \
-  --scope 'src/foo/*,tests/foo/*'
+  --model gpt-6.1-sol --effort high --scope 'src/foo/*,tests/foo/*' --max-lines 100
 ```
 
 - Run with `run_in_background: true` and wait for the completion notice. Do not poll.
-- Defaults: model `gpt-6.1-sol`, effort `high`. Use `--effort xhigh` for cross-layer,
-  lifecycle-heavy, or UI work. Override the model with `--model` only on user request.
-- The script prints only Codex's final report, the diff stat, and a scope check. Do not
-  re-read files Codex touched in full.
+- `--model` and `--effort` are required. Take them from the slice's line in PLAN.md
+  (see "Model and effort" below); the script never chooses for you.
+- Implement mode (the default) prints the schema-constrained JSON report, this run's
+  diff stat and added/deleted line count, a scope check when requested, and token usage.
+  `--max-lines N` marks added + deleted lines over N as `OVER`; budget and scope warnings
+  do not change Codex's exit code. Do not re-read files Codex touched in full.
 - Slices run sequentially by default. Parallel only when scopes are disjoint and each
   uses its own worktree.
-- `STATUS: blocked` or non-empty QUESTIONS: answer by amending PLAN.md (decisions
+- JSON `status: "blocked"` or non-empty `questions`: answer by amending PLAN.md (decisions
   section), then re-run the slice. Do not patch around a planning gap in code.
+
+For a read-only investigation, write the question, required report format, and length
+in `.claude/handoff/<slug>/Q1.md`, then run:
+
+```bash
+"${CLAUDE_SKILL_DIR}/scripts/codex-slice.sh" .claude/handoff/<slug> Q1 --mode scout \
+  --model gpt-6.1-sol --effort medium
+```
+
+Scout requires no PLAN.md, uses `read-only`, and prints only the report. It does not
+apply the JSON schema, scope check, or change accounting; builds/tests require an
+explicit request in the question file. Claims need `path:line` evidence.
+
+## Model and effort (decided in the plan, never by the script)
+
+Write `Model / effort:` on every slice in PLAN.md and pass exactly that to the runner.
+
+| Work | Model | Effort |
+|---|---|---|
+| Read-only scout | `gpt-6.1-sol` | `medium`; `high` when tracing across modules |
+| Implementation slice with clear boundaries | `gpt-6.1-sol` | `high` |
+| Cross-layer, concurrency, lifecycle, or UI slice | `gpt-6.1-sol` | `xhigh` |
+| Independent review, once per PR | `gpt-6-astra` | `high` |
+| Mechanical change (rename, bulk replace) | `gpt-6-luna` | `default` |
+
+`--effort default` leaves the model's own default in place. This table reflects the models
+available on 2026-10-05. When `~/.codex/models_cache.json` lists a newer model, or results
+on real slices contradict a row, propose an updated table to the user with the evidence.
+Do not switch silently.
 
 ## 3. Verify and review
 
@@ -75,20 +107,31 @@ Requirement: $ARGUMENTS
      helpers, narrating comments, mock-only tests, weakened tests, UI drift from tokens
    - wired up: new code is reachable from its callers/registrations
    - obsolete code removed
-3. For larger or higher-risk diffs, additionally spawn the read-only `reviewer-sol`
-   agent with the PLAN path and base sha, and merge its concrete findings with yours.
+3. Once per PR (and earlier for a high-risk slice) run the independent review. It is
+   read-only, reads PLAN.md and the diff since `base.sha`, and reports ranked findings:
+
+   ```bash
+   "${CLAUDE_SKILL_DIR}/scripts/codex-slice.sh" .claude/handoff/<slug> R1 --mode review \
+     --model gpt-6-astra --effort high
+   ```
+
+   It looks for correctness and plan violations. Taste stays your job. Verify each
+   finding against the code before acting on it.
 4. Verdict per slice: accept, or write numbered concrete issues (file, evidence, what to
    change) to `.claude/handoff/<slug>/feedback-S1.md` and re-run:
 
 ```bash
 "${CLAUDE_SKILL_DIR}/scripts/codex-slice.sh" .claude/handoff/<slug> S1 \
-  --feedback .claude/handoff/<slug>/feedback-S1.md --scope '...'
+  --model gpt-6.1-sol --effort high --feedback .claude/handoff/<slug>/feedback-S1.md --scope '...'
 ```
 
 - Maximum 2 fix rounds per slice. After that, either edit the few remaining lines
   yourself (if tiny) or stop and report to the user with the blocker. Do not loop.
 - If the same class of issue repeats, the plan or charter is missing a rule. Add it to
   PLAN.md or the repo's `.claude/taste.md`, then re-run.
+- Fix rounds resume the saved `reports/<slice>.thread` by default with only feedback
+  and a short assignment. `--fresh`, or a missing thread file, sends the full prompt
+  plus feedback in a cold run.
 
 ## 4. Close
 

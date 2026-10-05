@@ -25,11 +25,15 @@ Run in order unless marked parallel. Each slice is independently checkable.
 - Scope (paths the slice may touch): `<glob>`, `<glob>`
 - Do: <concrete work, referencing existing files/patterns to follow>
 - Wiring: <where it must be connected: callers, registration, routes, exports>
+- Model / effort: <from the table in SKILL.md, e.g. gpt-6.1-sol / high>
+- Expected size: <approximate added + deleted lines for this slice>
 - Acceptance (commands that decide pass/fail; no self-grading):
   - `<command>` -> <expected result>
   - Behavior: <observable behavior covered by a command or a named test>
 
 ### S2 — <name>
+- Model / effort: <from the table in SKILL.md, e.g. gpt-6.1-sol / high>
+- Expected size: <approximate added + deleted lines for this slice>
 ...
 
 ## Review focus (for the Opus review pass)

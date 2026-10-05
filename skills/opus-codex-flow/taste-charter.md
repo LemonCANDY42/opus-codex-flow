@@ -53,15 +53,18 @@ what to build belongs to the plan; judgment about how to write it cleanly belong
 
 Stopping with a precise question is a correct outcome. Silent guessing is not.
 
-## Final report format (your last message, 25 lines max)
+## Final report format
 
-```
-STATUS: done | blocked
-CHANGED: <file>: <one-line purpose>   (one per file)
-CHECKS: <command> -> pass/fail        (the acceptance commands you actually ran)
-DEVIATIONS: none | <what differed from the plan and why>
-QUESTIONS/BLOCKERS: none | <specific>
-NOTICED-BUT-UNTOUCHED: none | <unrelated issues, one line each>
-```
+Return only a JSON object matching `report.schema.json`, keeping it concise enough to fit within 25 lines.
+
+- `status`: `"done"` or `"blocked"`.
+- `changed`: array of `{ "file", "purpose" }`, one entry per changed file.
+- `checks`: array of `{ "command", "result" }`, with result `"pass"`, `"fail"`, or
+  `"not_run"`; report the acceptance commands and their actual outcomes.
+- `deviations`: array of strings explaining differences from the plan and why.
+- `questions`: array of specific unresolved questions or blockers.
+- `noticed`: array of unrelated issues left untouched.
+
+All fields are required; use empty arrays when there is nothing to report. No extra fields.
 
 No summary of your process, no praise, no restating the plan.
