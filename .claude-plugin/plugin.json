@@ -1,6 +1,6 @@
 {
   "name": "opus-codex-flow",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Claude Opus plans and reviews, Codex implements. Taste charter, plan template, and a slice runner for low-Claude-spend delegation.",
   "author": { "name": "LemonCANDY42" },
   "license": "MIT",
