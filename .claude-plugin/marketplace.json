@@ -1,0 +1,16 @@
+{
+  "name": "opus-codex-flow",
+  "owner": { "name": "LemonCANDY42" },
+  "metadata": {
+    "description": "Plan with Claude Opus, implement with Codex, review with Opus."
+  },
+  "plugins": [
+    {
+      "name": "opus-codex-flow",
+      "description": "Claude Opus plans and reviews, Codex implements. Taste charter, plan template, and a slice runner.",
+      "version": "0.1.0",
+      "author": { "name": "LemonCANDY42" },
+      "source": "./"
+    }
+  ]
+}
