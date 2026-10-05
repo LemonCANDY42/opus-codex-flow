@@ -8,7 +8,7 @@
     {
       "name": "opus-codex-flow",
       "description": "Claude Opus plans and reviews, Codex implements. Taste charter, plan template, and a slice runner.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": { "name": "LemonCANDY42" },
       "source": "./"
     }

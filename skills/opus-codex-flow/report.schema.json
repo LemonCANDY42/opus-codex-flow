@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "changed", "checks", "deviations", "questions", "noticed"],
+  "properties": {
+    "status": {"type": "string", "enum": ["done", "blocked"]},
+    "changed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "purpose"],
+        "properties": {
+          "file": {"type": "string"},
+          "purpose": {"type": "string"}
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "result"],
+        "properties": {
+          "command": {"type": "string"},
+          "result": {"type": "string", "enum": ["pass", "fail", "not_run"]}
+        }
+      }
+    },
+    "deviations": {"type": "array", "items": {"type": "string"}},
+    "questions": {"type": "array", "items": {"type": "string"}},
+    "noticed": {"type": "array", "items": {"type": "string"}}
+  }
+}
