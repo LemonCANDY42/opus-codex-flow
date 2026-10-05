@@ -82,6 +82,13 @@ explicit request in the question file. Claims need `path:line` evidence.
 
 Write `Model / effort:` on every slice in PLAN.md and pass exactly that to the runner.
 
+The authority is the user's routing file `~/.claude/opus-codex-flow/model-routing.md`.
+Read it before writing a plan. If it does not exist, create it from the default table
+below, in the user's language, with the same sections: principles, current choices,
+observations, change log.
+
+Default table (models available on 2026-10-05):
+
 | Work | Model | Effort |
 |---|---|---|
 | Read-only scout | `gpt-6.1-sol` | `medium`; `high` when tracing across modules |
@@ -90,10 +97,15 @@ Write `Model / effort:` on every slice in PLAN.md and pass exactly that to the r
 | Independent review, once per PR | `gpt-6-astra` | `high` |
 | Mechanical change (rename, bulk replace) | `gpt-6-luna` | `default` |
 
-`--effort default` leaves the model's own default in place. This table reflects the models
-available on 2026-10-05. When `~/.codex/models_cache.json` lists a newer model, or results
-on real slices contradict a row, propose an updated table to the user with the evidence.
-Do not switch silently.
+`--effort default` leaves the model's own default in place.
+
+You maintain the routing file on your own judgment. Quality comes first, then cost and
+speed; Codex usage is prepaid, so never drop a tier only to save Codex usage. When
+`~/.codex/models_cache.json` lists a newer model, or results on real slices contradict a
+row, change the row and add a dated change-log line stating what changed and the evidence
+(fix rounds, plan deviations, review findings, duration, or a checkable public evaluation).
+After each real slice add one line to the observations table. Tell the user in your closing
+report whenever you changed a row.
 
 ## 3. Verify and review
 

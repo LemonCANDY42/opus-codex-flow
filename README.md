@@ -49,7 +49,7 @@ codex-slice.sh <handoff-dir> <slice-id> --model M --effort E [--mode implement|s
                [--scope "glob,glob"] [--feedback FILE] [--max-lines N] [--fresh] [--repo DIR]
 ```
 
-`--model` and `--effort` are required: the plan states them per slice and the script never picks. `--effort default` keeps the model's own default. The selection table lives in [SKILL.md](skills/opus-codex-flow/SKILL.md#model-and-effort-decided-in-the-plan-never-by-the-script). `--mode review` runs a read-only independent review of the diff since the recorded base against the plan. Each run writes `reports/<slice>.runN.{md,log,prompt.md}` under the handoff directory. The model slug must exist in your Codex install; check `~/.codex/models_cache.json`.
+`--model` and `--effort` are required: the plan states them per slice and the script never picks. `--effort default` keeps the model's own default. The choices live in a user-readable file, `~/.claude/opus-codex-flow/model-routing.md`, which Claude creates from the default table in [SKILL.md](skills/opus-codex-flow/SKILL.md) and maintains with a change log: quality first, then cost and speed. `--mode review` runs a read-only independent review of the diff since the recorded base against the plan. Each run writes `reports/<slice>.runN.{md,log,prompt.md}` under the handoff directory. The model slug must exist in your Codex install; check `~/.codex/models_cache.json`.
 
 Implement mode is the default and requires `PLAN.md`. Every invocation disables hooks and color and logs JSONL events. The final report is printed as-is and follows [report.schema.json](skills/opus-codex-flow/report.schema.json): `status`, `changed`, `checks`, `deviations`, `questions`, and `noticed`.
 
