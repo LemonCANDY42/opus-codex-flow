@@ -89,6 +89,13 @@ tests/smoke.sh      # uses a fake codex binary; no network, no tokens
 
 CI runs shellcheck, the smoke test, and JSON validation of the manifests.
 
+## Community
+
+This project recognizes [LINUX DO](https://linux.do) and supports sincere, friendly,
+collaborative, and professional open-source discussion.
+
+本项目认可 [LINUX DO](https://linux.do) 社区，支持真诚、友善、团结、专业的开源交流。
+
 ## License
 
 MIT
