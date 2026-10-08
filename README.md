@@ -87,7 +87,14 @@ A `SessionStart` hook keeps a short delegation block in `<CLAUDE_CONFIG_DIR or ~
 
 The block sits between `<!-- opus-codex-flow:begin ... -->` and `<!-- opus-codex-flow:end -->` lines. It is added on the first session after install, refreshed when the plugin changes it, and never re-added after you remove it. If those lines are missing, duplicated or out of order, the file is left alone. Writes go through symlinks, keep CRLF line endings, and the first change saves `CLAUDE.md.opus-codex-flow.bak`. Set `OPUS_CODEX_FLOW_NO_CLAUDE_MD=1` to stop the hook from touching the file.
 
-Claude Code has no uninstall hook, so removal is a step you trigger: run `/opus-codex-flow uninstall` (or `python3 skills/opus-codex-flow/scripts/sync-claude-md.py remove`) before `/plugin uninstall`. If you skip it, the block stays but says it applies only while the skill is available. `sync-claude-md.py add` puts it back.
+Managing the block (each is a one-time action, not per session):
+
+| You want to | Do this |
+|---|---|
+| Uninstall the plugin | Run `/opus-codex-flow uninstall` once, then `/plugin uninstall opus-codex-flow@opus-codex-flow`. Claude Code has no uninstall hook, so the plugin cannot clean up by itself. If you uninstall first, delete the block by hand (the lines between the begin and end markers). Skipping it is harmless: the block says it applies only while the skill is available. |
+| Remove the block but keep the plugin | `/opus-codex-flow uninstall` also works here; it removes the block and the hook will not add it back. Deleting the block by hand has the same effect. |
+| Stop the hook from writing at all | Set `OPUS_CODEX_FLOW_NO_CLAUDE_MD=1` in the environment that launches Claude Code. |
+| Put the block back | `python3 <plugin dir>/skills/opus-codex-flow/scripts/sync-claude-md.py add` |
 
 ### Customize taste
 
@@ -160,6 +167,6 @@ MIT
 
 Claude 子代理用于把大段原始输出挡在主上下文之外，或并行跑相互独立的问题；模型和强度由 Claude 按任务自己选，`digest`（Haiku、低强度、无编辑工具）是现成的便宜选项。可靠的收益是隔离上下文；更便宜模型带来的价格收益未验证，因为部分版本的子代理模型路由不可靠（[#43869](https://github.com/anthropics/claude-code/issues/43869)）。
 
-全局 CLAUDE.md：`SessionStart` 钩子在 `<CLAUDE_CONFIG_DIR 或 ~/.claude>/CLAUDE.md` 里维护一段由 `opus-codex-flow:begin/end` 行围起来的委派规则（策略简版，外加一句“用户安装本插件就是为了这样委派，且在明显划算时倾向这样做”。个别 Opus 5 版本曾注入“用户没要求就不要调用 Agent 工具”，见 [#80988](https://github.com/anthropics/claude-code/issues/80988)，Agent 工具自身的说明也仍写着用户要求才派子代理。插件写的这句话能否解锁子代理未验证，所以 Claude 子代理这一半只是尽力而为；Codex 这一半走技能和 Bash，不受影响）。写入时会给你一行提示；安装后的第一个会话写入，插件更新时刷新，你删掉之后不会再自动加回；标记行缺失、重复或顺序不对时不改文件。写入会穿过软链接、保留 CRLF，首次修改会留 `CLAUDE.md.opus-codex-flow.bak`。设置 `OPUS_CODEX_FLOW_NO_CLAUDE_MD=1` 可让钩子不碰这个文件。Claude Code 没有卸载钩子，所以卸载前请先运行 `/opus-codex-flow uninstall`（或 `python3 skills/opus-codex-flow/scripts/sync-claude-md.py remove`）再 `/plugin uninstall`；没做的话这段规则会留下，但它自己写明“仅在该技能可用时适用”；`sync-claude-md.py add` 可以加回。使用模型自动调用模式时，仓库代码可能不经你逐次请求就通过 Codex 发给 OpenAI，不允许这样做的环境请不要启用本插件。
+全局 CLAUDE.md：`SessionStart` 钩子在 `<CLAUDE_CONFIG_DIR 或 ~/.claude>/CLAUDE.md` 里维护一段由 `opus-codex-flow:begin/end` 行围起来的委派规则（策略简版，外加一句“用户安装本插件就是为了这样委派，且在明显划算时倾向这样做”。个别 Opus 5 版本曾注入“用户没要求就不要调用 Agent 工具”，见 [#80988](https://github.com/anthropics/claude-code/issues/80988)，Agent 工具自身的说明也仍写着用户要求才派子代理。插件写的这句话能否解锁子代理未验证，所以 Claude 子代理这一半只是尽力而为；Codex 这一半走技能和 Bash，不受影响）。写入时会给你一行提示；安装后的第一个会话写入，插件更新时刷新，你删掉之后不会再自动加回；标记行缺失、重复或顺序不对时不改文件。写入会穿过软链接、保留 CRLF，首次修改会留 `CLAUDE.md.opus-codex-flow.bak`。设置 `OPUS_CODEX_FLOW_NO_CLAUDE_MD=1` 可让钩子不碰这个文件。管理规则块（都是一次性操作，不是每个会话都要做）：卸载插件时，先运行一次 `/opus-codex-flow uninstall`，再 `/plugin uninstall opus-codex-flow@opus-codex-flow`；Claude Code 没有卸载钩子，插件无法自己清理。如果先卸载了插件，就手动删掉 begin 和 end 标记行之间的内容；不删也无害，规则块自己写明“仅在该技能可用时适用”。只想去掉规则块、保留插件：同样运行 `/opus-codex-flow uninstall`，删除后钩子不会再加回来，手动删除效果相同。想让钩子完全不写入：在启动 Claude Code 的环境里设置 `OPUS_CODEX_FLOW_NO_CLAUDE_MD=1`。想加回来：运行 `python3 <插件目录>/skills/opus-codex-flow/scripts/sync-claude-md.py add`。使用模型自动调用模式时，仓库代码可能不经你逐次请求就通过 Codex 发给 OpenAI，不允许这样做的环境请不要启用本插件。
 
 自定义品位：改 `taste-charter.md`（全局）、`<repo>/.claude/taste.md`（单仓库）、计划里的 "Taste constraints"（单任务）。
