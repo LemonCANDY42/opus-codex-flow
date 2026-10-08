@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "opus-codex-flow",
-      "description": "Claude Opus plans and reviews, Codex implements. Taste charter, plan template, and a slice runner.",
-      "version": "0.2.1",
+      "description": "Claude Opus plans and reviews, Codex implements. Taste charter, plan template, a slice runner and a quota check. Includes a SessionStart hook that maintains a delegation block in your global CLAUDE.md.",
+      "version": "0.3.0",
       "author": { "name": "LemonCANDY42" },
       "source": "./"
     }

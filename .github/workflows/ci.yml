@@ -6,10 +6,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: shellcheck
-        run: shellcheck skills/opus-codex-flow/scripts/codex-slice.sh tests/smoke.sh
+        run: shellcheck skills/opus-codex-flow/scripts/codex-slice.sh tests/smoke.sh tests/policy.sh
       - name: smoke
         run: tests/smoke.sh
+      - name: policy
+        run: tests/policy.sh
+      - name: python compiles
+        run: python3 -m py_compile skills/opus-codex-flow/scripts/*.py
       - name: manifests are valid JSON
         run: |
           python3 -m json.tool .claude-plugin/plugin.json >/dev/null
           python3 -m json.tool .claude-plugin/marketplace.json >/dev/null
+          python3 -m json.tool hooks/hooks.json >/dev/null

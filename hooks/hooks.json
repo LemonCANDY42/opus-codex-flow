@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/skills/opus-codex-flow/scripts/sync-claude-md.py\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
