@@ -1,6 +1,6 @@
 {
   "name": "opus-codex-flow",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Claude Opus plans and reviews, Codex implements. Taste charter, plan template, a slice runner and a quota check for low-Claude-spend delegation. Includes a SessionStart hook that maintains a delegation block in your global CLAUDE.md, and a digest agent with no edit tools.",
   "author": { "name": "LemonCANDY42" },
   "license": "MIT",
