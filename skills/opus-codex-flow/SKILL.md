@@ -22,7 +22,8 @@ in your session, locate the script with
 Requirement: $ARGUMENTS (empty when you invoked this skill yourself: the requirement is the task at hand)
 
 If the requirement is exactly `uninstall`: run `python3 "${CLAUDE_SKILL_DIR}/scripts/sync-claude-md.py" remove`,
-report what it printed, tell the user to run `/plugin uninstall opus-codex-flow@opus-codex-flow`, and stop.
+report what it printed, add that `/plugin uninstall opus-codex-flow@opus-codex-flow` removes the plugin
+itself if they want that, and stop.
 
 ## 0. Gate (direct work is the default)
 
