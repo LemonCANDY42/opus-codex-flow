@@ -1,6 +1,6 @@
 ---
 name: opus-codex-flow
-description: Decides quickly whether and to whom to delegate coding work, and runs the delegation. Opus plans and reviews; Codex implements or scouts taste-light work when its quota is clearly ample; a Claude subagent keeps big raw output out of the main context. Delegate only when it is an easy call; otherwise work directly. The user can also invoke it with /opus-codex-flow <requirement>. Not for trivial edits, small critical changes, docs or user-facing copy, GUI work, or undecided design.
+description: Runs a delegation once you have decided that handing work off clearly pays, and explains how to decide. Opus plans and reviews; Codex implements or scouts taste-light work when its quota is clearly ample; a Claude subagent keeps big raw output out of the main context. The decision rules are short and also live in the user's CLAUDE.md block, so you rarely need to load this skill just to decide. The user can also invoke it with /opus-codex-flow <requirement>. Not for trivial edits, small critical changes, docs or user-facing copy, GUI work, or undecided design.
 argument-hint: <requirement>
 ---
 
@@ -55,7 +55,9 @@ Decide quickly. Delegate only when it is an easy call; if you are weighing it, d
      `digest` agent (Haiku, low effort, no edit tools) is a ready-made cheap option, not a
      requirement.
    - Yourself: everything else.
-5. Needs a git repo and the `codex` CLI for Codex work. Otherwise say what is missing.
+5. Needs a git repo and the `codex` CLI for Codex work. Otherwise say what is missing. Codex
+   sends repository code to OpenAI: if you cannot tell that this repository may leave the
+   machine (work or client code, an AGENTS.md or CONTRIBUTING note), do it yourself or ask once.
 6. Non-trivial Codex work: prefer an isolated worktree (`EnterWorktree`) so the diff against
    the base is exactly this task.
 7. Ask the user only when a missing answer would change behavior, an interface, or
@@ -79,7 +81,7 @@ budget means the handoff is losing. Take over and do it directly.
      in `<repo>/.claude/taste.md` and is injected automatically.
 3. Self-check before delegating: each slice has scope + commands + wiring; no decision
    is deferred with "as appropriate". Fix the plan, not the code.
-4. Tell the user the plan in ≤10 lines (Chinese) and continue without waiting, unless
+4. Tell the user the plan in ≤10 lines (in the user's language) and continue without waiting, unless
    the plan involves irreversible/external actions or unresolved ambiguity.
 
 ## 2. Delegate (one slice at a time)
@@ -203,7 +205,7 @@ report whenever you changed a row.
 - After the last slice: run the full acceptance set once, confirm base..HEAD diff has
   no stray files (handoff dir is not part of the change; add `.claude/handoff/` to
   `.gitignore` if the repo does not already ignore it).
-- Report to the user in Chinese: what changed, evidence (commands + results), plan
+- Report to the user in their language: what changed, evidence (commands + results), plan
   deviations, anything Codex noticed but left untouched, what remains unverified, and one
   line on handoff overhead against your estimate of doing it directly.
 - Commit, push, or open a PR only when the user asked or the project rules require it.
