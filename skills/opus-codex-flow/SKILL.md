@@ -1,7 +1,6 @@
 ---
 name: opus-codex-flow
-description: Opus plans and reviews, Codex implements, with taste constraints injected. Invoke explicitly with /opus-codex-flow <requirement> for non-trivial feature or fix work where you want Claude spend kept low.
-disable-model-invocation: true
+description: Runs a delegation once you have decided that handing work off clearly pays, and explains how to decide. Opus plans and reviews; Codex implements or scouts taste-light work when its quota is clearly ample; a Claude subagent keeps big raw output out of the main context. The decision rules are short and also live in the user's CLAUDE.md block, so you rarely need to load this skill just to decide. The user can also invoke it with /opus-codex-flow <requirement>. Not for trivial edits, small critical changes, docs or user-facing copy, GUI work, or undecided design.
 argument-hint: <requirement>
 ---
 
@@ -11,28 +10,66 @@ You are the planner and reviewer. Codex does the bulk of the typing. Your tokens
 decisions, taste, and verification, not to writing code or reading whole files.
 
 Files in this skill: `taste-charter.md` (implement rules), `scout-charter.md` (read-only
-investigation rules), `review-charter.md` (independent review rules), `report.schema.json`, `plan-template.md`, and
-`scripts/codex-slice.sh` (the delegation runner).
+investigation rules), `review-charter.md` (independent review rules), `report.schema.json`, `plan-template.md`,
+`scripts/codex-slice.sh` (the delegation runner), `scripts/codex-quota.py` (quota gate),
+`scripts/sync-claude-md.py` with `claude-md-block.md` (the managed block in the global CLAUDE.md),
+and the plugin's `digest` agent (Haiku, no edit tools).
 
 Runner path: `${CLAUDE_SKILL_DIR}/scripts/codex-slice.sh`. If that variable is not expanded
 in your session, locate the script with
 `find ~/.claude -path '*opus-codex-flow/scripts/codex-slice.sh' | head -1` and use that path.
 
-Requirement: $ARGUMENTS
+Requirement: $ARGUMENTS (empty when you invoked this skill yourself: the requirement is the task at hand)
 
-## 0. Gate
+If the requirement is exactly `uninstall`: run `python3 "${CLAUDE_SKILL_DIR}/scripts/sync-claude-md.py" remove`,
+report what it printed, tell the user to run `/plugin uninstall opus-codex-flow@opus-codex-flow`, and stop.
 
-- Needs a git repo and the `codex` CLI. Otherwise stop and say what is missing.
-- Trivial work (≤2 files, ≤30 lines, no new logic): just do it yourself, skip Codex.
-- Non-trivial work: prefer an isolated worktree (`EnterWorktree`) so the diff against
-  the base is exactly this task.
-- Ask the user only when a missing answer would change behavior, an interface, or
-  compatibility and cannot be inferred. Otherwise decide, record it in PLAN.md, move on.
+## 0. Gate (direct work is the default)
+
+Decide quickly. Delegate only when it is an easy call; if you are weighing it, do the work yourself.
+
+1. Does it clearly pay? The handoff costs you a plan or brief, a read of the report and
+   diff, and the acceptance runs. It pays when the work is mostly iteration or bulk (many
+   build-and-test cycles, wide reading, a large mechanical sweep) and the result can be
+   stated as runnable acceptance commands. Judge by difficulty and shape. Line counts are
+   hard to predict, so do not lean on them.
+2. Is it fit for Codex? Backend logic, tests, data plumbing and mechanical change that
+   depend little on taste, with a plan you can write down. Keep with Claude: trivial edits,
+   small critical changes, docs and user-facing copy, GUI or real-device work, undecided
+   design (decide first, then delegate). Rows in the user's routing file that say otherwise
+   win.
+3. Quota (Codex only). Once per task, run
+   `python3 "${CLAUDE_SKILL_DIR}/scripts/codex-quota.py"` (it reads CodexBar, a few
+   seconds). It prints `QUOTA: ample|tight|unknown`, judged from the subscription tier, the
+   weekly window's remaining share and CodexBar's pace. Late in the window, unspent
+   headroom well ahead of pace lowers the remaining-share floor. Codex work needs `ample`.
+   On `tight` or `unknown`, do it yourself unless the user invoked the skill or asked for
+   Codex; then go on and state the verdict in one line.
+4. Pick the executor and its level yourself:
+   - Codex: taste-light, plan-able, verifiable work; also broad read-only investigation,
+     which costs little Claude quota (you write the question and read the report).
+   - A Claude subagent: to keep big raw output (logs, full test output, wide searches) out
+     of your context, or to run independent questions in parallel. Choose model and effort
+     by the task: a small fast model for mechanical or summarising work, a stronger one for
+     reading that needs judgment, higher effort where verification matters. The plugin's
+     `digest` agent (Haiku, low effort, no edit tools) is a ready-made cheap option, not a
+     requirement.
+   - Yourself: everything else.
+5. Needs a git repo and the `codex` CLI for Codex work. Otherwise say what is missing. Codex
+   sends repository code to OpenAI: if you cannot tell that this repository may leave the
+   machine (work or client code, an AGENTS.md or CONTRIBUTING note), do it yourself or ask once.
+6. Non-trivial Codex work: prefer an isolated worktree (`EnterWorktree`) so the diff against
+   the base is exactly this task.
+7. Ask the user only when a missing answer would change behavior, an interface, or
+   compatibility and cannot be inferred. Otherwise decide, record it in PLAN.md, move on.
+
+Stop-loss: two failed fix rounds, a plan that keeps growing, or a slice well over its change
+budget means the handoff is losing. Take over and do it directly.
 
 ## 1. Plan (your main job)
 
 1. Investigate the minimum needed. Use the repo's owning docs and existing patterns.
-   Delegate broad reading to an `Explore`-type subagent instead of loading files yourself.
+   Broad reading follows the executor table in section 0.
 2. Write `.claude/handoff/<slug>/PLAN.md` from `plan-template.md`. Rules:
    - Resolve every behavior, interface, compatibility, and state-ownership decision NOW.
      The main failure of this workflow is a decision left implicit, which Codex then
@@ -44,7 +81,7 @@ Requirement: $ARGUMENTS
      in `<repo>/.claude/taste.md` and is injected automatically.
 3. Self-check before delegating: each slice has scope + commands + wiring; no decision
    is deferred with "as appropriate". Fix the plan, not the code.
-4. Tell the user the plan in ≤10 lines (Chinese) and continue without waiting, unless
+4. Tell the user the plan in ≤10 lines (in the user's language) and continue without waiting, unless
    the plan involves irreversible/external actions or unresolved ambiguity.
 
 ## 2. Delegate (one slice at a time)
@@ -78,6 +115,20 @@ Scout requires no PLAN.md, uses `read-only`, and prints only the report. It does
 apply the JSON schema, scope check, or change accounting; builds/tests require an
 explicit request in the question file. Claims need `path:line` evidence.
 
+## Claude subagents
+
+They share your usage limits and start with no conversation history, so a vague brief wastes
+the spend. Brief = objective, what to look at, the commands allowed, output format and a
+length cap (about 300 words, evidence as `path:line` or quoted lines). Start with one; run
+several in parallel only for independent questions, keep the fan-out small, and do not nest.
+Edits go to Codex or stay with you.
+
+The dependable gain is context isolation. A price gain from a cheaper model is unverified:
+subagent model routing has been unreliable in some versions
+([anthropics/claude-code#43869](https://github.com/anthropics/claude-code/issues/43869)) and
+you cannot always see which model served a call. If you learn the parent model served it,
+stop using subagents for cost reasons in that session.
+
 ## Model and effort (decided in the plan, never by the script)
 
 Write `Model / effort:` on every slice in PLAN.md and pass exactly that to the runner.
@@ -96,15 +147,19 @@ Default table (models available on 2026-10-05):
 | Cross-layer, concurrency, lifecycle, or UI slice | `gpt-6.1-sol` | `xhigh` |
 | Independent review, once per PR | `gpt-6-astra` | `high` |
 | Mechanical change (rename, bulk replace) | `gpt-6-luna` | `default` |
+| GUI or real-device work | Claude does it | not delegated |
+| Small critical changes, docs, user-facing copy | Claude does it | not delegated |
 
 `--effort default` leaves the model's own default in place.
 
 You maintain the routing file on your own judgment. Quality comes first, then cost and
-speed; Codex usage is prepaid, so never drop a tier only to save Codex usage. When
+speed; Codex usage is prepaid, so never drop a tier only to save Codex usage. Whether to
+delegate at all is the quota gate's call (section 0), not a row in this table. When
 `~/.codex/models_cache.json` lists a newer model, or results on real slices contradict a
 row, change the row and add a dated change-log line stating what changed and the evidence
 (fix rounds, plan deviations, review findings, duration, or a checkable public evaluation).
-After each real slice add one line to the observations table. Tell the user in your closing
+After each real slice add one line to the observations table, including your own handoff
+overhead against your estimate of doing it directly, so the section 0 thresholds can be tuned. Tell the user in your closing
 report whenever you changed a row.
 
 ## 3. Verify and review
@@ -150,8 +205,9 @@ report whenever you changed a row.
 - After the last slice: run the full acceptance set once, confirm base..HEAD diff has
   no stray files (handoff dir is not part of the change; add `.claude/handoff/` to
   `.gitignore` if the repo does not already ignore it).
-- Report to the user in Chinese: what changed, evidence (commands + results), plan
-  deviations, anything Codex noticed but left untouched, what remains unverified.
+- Report to the user in their language: what changed, evidence (commands + results), plan
+  deviations, anything Codex noticed but left untouched, what remains unverified, and one
+  line on handoff overhead against your estimate of doing it directly.
 - Commit, push, or open a PR only when the user asked or the project rules require it.
 
 ## Token discipline (why this saves Claude spend)
