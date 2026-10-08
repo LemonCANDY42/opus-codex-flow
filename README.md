@@ -67,7 +67,7 @@ Scout needs no `PLAN.md`, uses a `read-only` sandbox and [scout-charter.md](skil
 
 ### Delegation policy
 
-Direct work is the default. Claude delegates on its own judgment only when the handoff clearly costs less than doing the work (a plan or brief, reading the report and diff, the acceptance runs), the work leans on backend logic, tests, data plumbing or mechanical change rather than taste, and the quota check allows it. The numbers and the executor table live in one place, [SKILL.md](skills/opus-codex-flow/SKILL.md) section 0, and are rules of thumb to tune against your own results. Small critical changes, docs and user-facing copy, GUI or real-device work, and undecided design stay with Claude. Two failed fix rounds or a plan that keeps growing means Claude takes over.
+Direct work is the default, and the call is meant to be quick: Claude delegates only when it is an easy yes, and does the work itself when it is weighing it. The test is whether the handoff (a plan or brief, reading the report and diff, the acceptance runs) clearly costs less than doing the work. That tends to hold when the work is mostly iteration or bulk and the result can be stated as runnable acceptance commands. It is judged by difficulty and shape, not by line counts. Codex gets taste-light work: backend logic, tests, data plumbing, mechanical change, and broad read-only investigation. Small critical changes, docs and user-facing copy, GUI or real-device work, and undecided design stay with Claude. Two failed fix rounds or a plan that keeps growing means Claude takes over. [SKILL.md](skills/opus-codex-flow/SKILL.md) section 0 is the single source.
 
 **Quota check.** `scripts/codex-quota.py` reads [CodexBar](https://github.com/steipete/CodexBar) and prints `QUOTA: ample|tight|unknown`. It uses the weekly window and CodexBar's pace (a linear estimate if the pace is missing):
 
@@ -79,7 +79,7 @@ Direct work is the default. Claude delegates on its own judgment only when the h
 
 It is also `tight` when the short window is at 80% or more or CodexBar projects usage will not last to the reset. In the last quarter of the window, headroom that is about to expire counts for more: when usage is at least 10 points behind pace, the remaining floor drops to 15%. An unrecognised tier, stale window data or a missing CodexBar gives `unknown`. On `tight` or `unknown`, Claude does Codex-eligible work itself unless you invoked the skill or asked for Codex. Tune the tier limits with `OPUS_CODEX_FLOW_MIN_REMAINING` and `OPUS_CODEX_FLOW_MAX_AHEAD` (percent points).
 
-**Claude subagents** are limited to bulk digestion of large output (logs, full test output, wide searches) through the `digest` agent (Haiku, low effort, no edit tools). The reliable gain is context isolation; a price gain from the cheaper model is unverified because subagent model routing has been unreliable in some versions ([anthropics/claude-code#43869](https://github.com/anthropics/claude-code/issues/43869)).
+**Claude subagents** are for keeping large raw output out of the main context or running independent questions in parallel. Claude chooses their model and effort by the task; the `digest` agent (Haiku, low effort, no edit tools) is a ready-made cheap option. The reliable gain is context isolation; a price gain from a cheaper model is unverified because subagent model routing has been unreliable in some versions ([anthropics/claude-code#43869](https://github.com/anthropics/claude-code/issues/43869)).
 
 ### Global CLAUDE.md block
 
@@ -147,11 +147,11 @@ MIT
 - 每个切片最多 2 轮返工；提交和 PR 只在你要求时才做。
 - 品位章程来自对 GPT 系编码代理的经验判断，不是实测基准，请按实际情况调整；也尚未找到公开的对照实验，建议先用自己的几个任务比较成本和偏离度。
 
-委派策略：默认直接做。只有交接成本（写计划或任务说明、读报告和 diff、跑验收）明显小于直接做、工作偏后端逻辑/测试/数据管线/机械改动而非品位、并且额度检查允许时，Claude 才会自行委派。具体数字和执行者表只在 [SKILL.md](skills/opus-codex-flow/SKILL.md) 的 section 0 维护，是经验阈值，需要按你自己的结果调整。小而关键的改动、文档与面向用户的文字、图形界面或真机操作、设计未定的工作仍由 Claude 做。两轮返工仍失败或计划越写越长，就由 Claude 接手。
+委派策略：默认直接做，而且要快速判断：只有一眼就划算才委派，拿不准就自己做。判断标准是交接（写计划或任务说明、读报告和 diff、跑验收）是否明显比直接做便宜；这通常出现在工作以反复迭代或批量为主、结果又能写成可运行验收命令的时候。按难度和形态判断，不看行数。Codex 拿品位依赖低的工作：后端逻辑、测试、数据管线、机械改动和大范围只读调查。小而关键的改动、文档与面向用户的文字、图形界面或真机操作、设计未定的工作仍由 Claude 做。两轮返工仍失败或计划越写越长，就由 Claude 接手。唯一来源是 [SKILL.md](skills/opus-codex-flow/SKILL.md) 的 section 0。
 
 额度检查：`scripts/codex-quota.py` 读取 CodexBar，输出 `QUOTA: ample|tight|unknown`，依据订阅档位、周窗口剩余比例和 CodexBar 的节奏（没有节奏数据时用线性估计）。pro 剩余至少 40%、领先节奏不超过 10 个百分点；plus、team 等其他付费档至少 60%、不超过 5 个百分点；free、go 不算富足。短窗口用量达 80%，或 CodexBar 预测额度撑不到重置，也是 `tight`。窗口最后四分之一里，即将过期的富余更值得用：用量落后节奏至少 10 个百分点时，剩余下限降到 15%。档位不认识、窗口数据过期或没有 CodexBar 为 `unknown`。`tight` 或 `unknown` 时 Claude 自己做，除非你手动调用技能或明确要求用 Codex。档位限值可用 `OPUS_CODEX_FLOW_MIN_REMAINING`、`OPUS_CODEX_FLOW_MAX_AHEAD` 调整。
 
-Claude 子代理只用于大输出的批量消化（日志、完整测试输出、大范围搜索），用 `digest`（Haiku、低强度、无编辑工具）。可靠的收益是隔离上下文；更便宜模型带来的价格收益未验证，因为部分版本的子代理模型路由不可靠（[#43869](https://github.com/anthropics/claude-code/issues/43869)）。
+Claude 子代理用于把大段原始输出挡在主上下文之外，或并行跑相互独立的问题；模型和强度由 Claude 按任务自己选，`digest`（Haiku、低强度、无编辑工具）是现成的便宜选项。可靠的收益是隔离上下文；更便宜模型带来的价格收益未验证，因为部分版本的子代理模型路由不可靠（[#43869](https://github.com/anthropics/claude-code/issues/43869)）。
 
 全局 CLAUDE.md：`SessionStart` 钩子在 `<CLAUDE_CONFIG_DIR 或 ~/.claude>/CLAUDE.md` 里维护一段由 `opus-codex-flow:begin/end` 行围起来的委派规则（策略简版，外加一句“安装本插件即表示用户允许并要求这样委派”，用来对付个别 Opus 5 版本注入的“用户没要求就不要调用 Agent 工具”，见 [#80988](https://github.com/anthropics/claude-code/issues/80988)，是否真能压过这条注入未验证）。写入时会给你一行提示；安装后的第一个会话写入，插件更新时刷新，你删掉之后不会再自动加回；标记行缺失、重复或顺序不对时不改文件。写入会穿过软链接、保留 CRLF，首次修改会留 `CLAUDE.md.opus-codex-flow.bak`。设置 `OPUS_CODEX_FLOW_NO_CLAUDE_MD=1` 可让钩子不碰这个文件。Claude Code 没有卸载钩子，所以卸载前请先运行 `/opus-codex-flow uninstall`（或 `python3 skills/opus-codex-flow/scripts/sync-claude-md.py remove`）再 `/plugin uninstall`；没做的话这段规则会留下，但它自己写明“仅在该技能可用时适用”；`sync-claude-md.py add` 可以加回。使用模型自动调用模式时，仓库代码可能不经你逐次请求就通过 Codex 发给 OpenAI，不允许这样做的环境请不要启用本插件。
 

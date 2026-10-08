@@ -1,6 +1,6 @@
 ---
 name: opus-codex-flow
-description: Decides whether and to whom to delegate coding work, conservatively, and runs the delegation. Opus plans and reviews; Codex implements or scouts when its quota is clearly ample; a cheap Claude subagent (Haiku digest) handles bulk read-only digestion. Use only when the handoff clearly costs less than doing the work directly. The user can also invoke it with /opus-codex-flow <requirement>. Not for trivial edits, small critical changes, docs or user-facing copy, GUI work, or undecided design.
+description: Decides quickly whether and to whom to delegate coding work, and runs the delegation. Opus plans and reviews; Codex implements or scouts taste-light work when its quota is clearly ample; a Claude subagent keeps big raw output out of the main context. Delegate only when it is an easy call; otherwise work directly. The user can also invoke it with /opus-codex-flow <requirement>. Not for trivial edits, small critical changes, docs or user-facing copy, GUI work, or undecided design.
 argument-hint: <requirement>
 ---
 
@@ -26,41 +26,35 @@ report what it printed, tell the user to run `/plugin uninstall opus-codex-flow@
 
 ## 0. Gate (direct work is the default)
 
-Delegate only when every check passes. Otherwise do the work yourself and say so in one line.
+Decide quickly. Delegate only when it is an easy call; if you are weighing it, do the work yourself.
 
-1. Net cost. The handoff costs you a plan or brief, a read of the report and diff, and the
-   acceptance runs. Delegate only when that is clearly less than doing the work directly
-   (reading, writing, debug loops). These are rules of thumb; calibrate them against the
-   observations table in the routing file.
-   - Codex slice: roughly 150 or more changed lines over 3 or more files, or 3 or more
-     build-and-test cycles, or 10 or more files of reading you do not need verbatim; and the
-     plan fits in about 50 lines; and acceptance is runnable commands. Reading this skill and
-     the routing file is part of the overhead: read only the routing file's choices and quota
-     sections, not its observations table.
-   - Claude subagent: the raw output you would otherwise read is large (about 10 or more
-     files, long logs, full test output) and a summary of about 300 words is enough.
-   - If settling the plan takes more effort than half the work, do it directly.
-2. Eligible work. Leans on backend logic, tests, data plumbing or mechanical change rather
-   than taste, and can be fixed in a plan with runnable acceptance. Keep with Claude:
-   trivial edits, small critical changes, docs and user-facing copy, GUI or real-device work,
-   and undecided design (decide first, then delegate). Rows in the user's routing file that
-   say otherwise win.
-3. Quota. Once per task, run `python3 "${CLAUDE_SKILL_DIR}/scripts/codex-quota.py"` (it reads
-   CodexBar, a few seconds). It prints `QUOTA: ample|tight|unknown`, judged from the
-   subscription tier, the weekly window's remaining share and CodexBar's pace. Late in the
-   window, unspent headroom well ahead of pace lowers the remaining-share floor.
-   Codex work needs `ample`. On `tight` or `unknown`, do it yourself unless the user invoked
-   the skill or asked for Codex; then go on and state the verdict in one line.
-4. Executor.
-
-   | Work | Executor |
-   |---|---|
-   | Broad read-only investigation, Codex ample | Codex scout (little Claude quota: you write the question and read the report) |
-   | Backend logic, tests, mechanical change with a plan | Codex implement slice |
-   | Bulk digestion that stays local: logs, test output, search sweeps | Claude subagent `opus-codex-flow:digest` (Haiku, low effort) |
-      | Independent review of a PR | per the routing file |
-   | Anything else | directly |
-
+1. Does it clearly pay? The handoff costs you a plan or brief, a read of the report and
+   diff, and the acceptance runs. It pays when the work is mostly iteration or bulk (many
+   build-and-test cycles, wide reading, a large mechanical sweep) and the result can be
+   stated as runnable acceptance commands. Judge by difficulty and shape. Line counts are
+   hard to predict, so do not lean on them.
+2. Is it fit for Codex? Backend logic, tests, data plumbing and mechanical change that
+   depend little on taste, with a plan you can write down. Keep with Claude: trivial edits,
+   small critical changes, docs and user-facing copy, GUI or real-device work, undecided
+   design (decide first, then delegate). Rows in the user's routing file that say otherwise
+   win.
+3. Quota (Codex only). Once per task, run
+   `python3 "${CLAUDE_SKILL_DIR}/scripts/codex-quota.py"` (it reads CodexBar, a few
+   seconds). It prints `QUOTA: ample|tight|unknown`, judged from the subscription tier, the
+   weekly window's remaining share and CodexBar's pace. Late in the window, unspent
+   headroom well ahead of pace lowers the remaining-share floor. Codex work needs `ample`.
+   On `tight` or `unknown`, do it yourself unless the user invoked the skill or asked for
+   Codex; then go on and state the verdict in one line.
+4. Pick the executor and its level yourself:
+   - Codex: taste-light, plan-able, verifiable work; also broad read-only investigation,
+     which costs little Claude quota (you write the question and read the report).
+   - A Claude subagent: to keep big raw output (logs, full test output, wide searches) out
+     of your context, or to run independent questions in parallel. Choose model and effort
+     by the task: a small fast model for mechanical or summarising work, a stronger one for
+     reading that needs judgment, higher effort where verification matters. The plugin's
+     `digest` agent (Haiku, low effort, no edit tools) is a ready-made cheap option, not a
+     requirement.
+   - Yourself: everything else.
 5. Needs a git repo and the `codex` CLI for Codex work. Otherwise say what is missing.
 6. Non-trivial Codex work: prefer an isolated worktree (`EnterWorktree`) so the diff against
    the base is exactly this task.
@@ -119,22 +113,19 @@ Scout requires no PLAN.md, uses `read-only`, and prints only the report. It does
 apply the JSON schema, scope check, or change accounting; builds/tests require an
 explicit request in the question file. Claims need `path:line` evidence.
 
-## Claude subagents (conservative)
+## Claude subagents
 
-Only for bulk digestion, the row in section 0. They share your usage limits and start with no
-conversation history, so a vague brief wastes the spend. The dependable gain is context
-isolation: big raw output stays out of your context and only the summary returns. Any price
-gain from the Haiku model is unverified, because model routing has been unreliable
-([anthropics/claude-code#43869](https://github.com/anthropics/claude-code/issues/43869))
-and you cannot always see which model served a call. If you learn the parent model served it,
+They share your usage limits and start with no conversation history, so a vague brief wastes
+the spend. Brief = objective, what to look at, the commands allowed, output format and a
+length cap (about 300 words, evidence as `path:line` or quoted lines). Start with one; run
+several in parallel only for independent questions, keep the fan-out small, and do not nest.
+Edits go to Codex or stay with you.
+
+The dependable gain is context isolation. A price gain from a cheaper model is unverified:
+subagent model routing has been unreliable in some versions
+([anthropics/claude-code#43869](https://github.com/anthropics/claude-code/issues/43869)) and
+you cannot always see which model served a call. If you learn the parent model served it,
 stop using subagents for cost reasons in that session.
-
-- Brief = objective, what to look at, the commands allowed, and a length cap (about 300
-  words, evidence as `path:line` or quoted lines). The `digest` agent has no edit tools:
-  edits go to Codex or stay with you.
-- One at a time by default. Two to four only for independent questions run in parallel.
-  No nesting. More than four needs the user's say-so.
-- Effort comes from the agent definition (`digest` is `low`).
 
 ## Model and effort (decided in the plan, never by the script)
 
